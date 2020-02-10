@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.zee.dynamic.autoconfigure.DynamicAutoConfiguration
