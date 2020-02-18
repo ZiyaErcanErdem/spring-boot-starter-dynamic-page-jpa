@@ -37,7 +37,7 @@ public class DynamicMetaModelBuilder<T> {
 		int outerJoinCountToTop = 0;
 		RelationType topRelationType = RelationType.SELF;
 		
-		PageMetamodel<T> topMetamodel = this.defineMetamodel(this.entityClass, topRelationType, topLevel, outerJoinCountToTop);
+		PageMetamodel<T> topMetamodel = this.defineMetamodel(null, this.entityClass, topRelationType, topPathPrefix, topLevel, outerJoinCountToTop);
 		this.context = new MetamodelContext<T>(this.config, topMetamodel);
 		
 		this.defineColumns(this.context, topMetamodel, topPathPrefix, this.entityClass);
@@ -55,34 +55,34 @@ public class DynamicMetaModelBuilder<T> {
 	private void processTask(MetamodelContext<T> context, AssociationTask<?> task) {
 		ColumnDescriptor<?> descriptor = task.getMinDescriber();
 		
-		if(null == descriptor) {
+		if(null == descriptor || descriptor.getLevel() >= this.config.getMaxAssociationLevel()) {
 			task.complete(null);
 			return;
 		}
 		
+		PageMetamodel<?> parent = descriptor.getContainer();
 		//String parentPropertyName = descriptor.getPropertyName();
 		String parentPath = descriptor.getPropertyPath();
-		//RelationType parentRelationType = descriptor.getParentRelationType();
 		int associationLevel = descriptor.getLevel() + 1;		
 		RelationType associationRelationType = descriptor.getAssociationRelationType();
 		//Class<?> associationEntityClass = columnDescriptor.getAssociationType();
 		Class<?> associationEntityClass = task.getPropertyType();
-		int associationOuterJoinCountToTop = descriptor.getOuterJoinCountToTop();
+		int distance = descriptor.getDistance();
 		if(RelationType.OUTER == associationRelationType) {
-			associationOuterJoinCountToTop++;
+			distance++;
 		}
 
-		PageMetamodel<?> association = this.defineMetamodel(associationEntityClass, associationRelationType, associationLevel, associationOuterJoinCountToTop);
+		PageMetamodel<?> association = this.defineMetamodel(parent, associationEntityClass, associationRelationType, parentPath, associationLevel, distance);
 		this.defineColumns(context, association, parentPath, associationEntityClass);
 		association.describe(task);
 		// task.complete(association);
 	}
 	
-	private <M> PageMetamodel<M> defineMetamodel(Class<M> entityClass, RelationType relationType, int level, int outerJoinCountToTop) {
+	private <M> PageMetamodel<M> defineMetamodel(PageMetamodel<?> parent, Class<M> entityClass, RelationType relationType, String path, int level, int distance) {
 		if(null == entityClass) {
 			return null;
 		}
-		PageMetamodel<M> metamodel = new PageMetamodel<M>(entityClass, relationType, level, outerJoinCountToTop);
+		PageMetamodel<M> metamodel = new PageMetamodel<M>(parent, entityClass, relationType, path, distance);
 		return metamodel;
 	}
 		
@@ -103,13 +103,14 @@ public class DynamicMetaModelBuilder<T> {
 			String propertyPath = this.buildPath(parentPathPrefix, propertyName);						
 			TypeDescriptor typeDescriptor = entityBean.getPropertyTypeDescriptor(propertyName);
 			
+			
 			if(this.isAssociation(entityBean, propertyName)) {
 				if(this.isManyToOneAssociation(entityBean, propertyName) || this.isOneToOneAssociation(entityBean, propertyName)) {			
-					context.defineColumn(targetMetamodel, propertyPath, propertyDescriptor, typeDescriptor, propertyType, RelationType.INNER);
+					context.defineColumn(targetMetamodel, propertyPath, propertyDescriptor, typeDescriptor, false, propertyType, RelationType.INNER);
 				}else if(this.isOneToManyAssociation(entityBean, propertyName)){
 					Class<?> parameterizedType = this.getElementTypeOfCollectionProperty(entityBean, propertyName);
 					if(null != parameterizedType) {								
-						context.defineColumn(targetMetamodel, propertyPath, propertyDescriptor, typeDescriptor, parameterizedType, RelationType.OUTER);
+						context.defineColumn(targetMetamodel, propertyPath, propertyDescriptor, typeDescriptor, false, parameterizedType, RelationType.OUTER);
 					}				
 				}
 			} else {

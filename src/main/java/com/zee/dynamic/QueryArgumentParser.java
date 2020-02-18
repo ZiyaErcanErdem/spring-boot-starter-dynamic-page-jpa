@@ -26,7 +26,7 @@ public class QueryArgumentParser {
     @SuppressWarnings({ "unchecked", "rawtypes" })
 	public <T> T parse(String argument, Class<T> type) throws IllegalArgumentException {
 
-    	log.info("Parsing argument ''{}'' as type {}", new Object[] {argument, type.getSimpleName()});
+    	log.debug("Parsing argument ''{}'' as type {}", new Object[] {argument, type.getSimpleName()});
 
         if (argument == null || "null".equals(argument.trim().toLowerCase())) {
         	return (T) null;
@@ -52,7 +52,7 @@ public class QueryArgumentParser {
         }
 
         try {
-        	log.info("Trying to get and invoke valueOf(String s) method on {}", type);
+        	log.debug("Trying to get and invoke valueOf(String s) method on {}", type);
             Method method = type.getMethod("valueOf", String.class);
             return (T) method.invoke(type, argument);
         } catch (InvocationTargetException ex) {
@@ -67,7 +67,7 @@ public class QueryArgumentParser {
         try {
         	return new SimpleDateFormat(DATE_TIME_PATTERN).parse(argument);
         } catch (ParseException ex) {
-        	log.info("Not a date time format, lets try with date format.");
+        	log.debug("Not a date time format, lets try with date format.");
         }
         try {
         	return  new SimpleDateFormat(DATE_PATTERN).parse(argument);

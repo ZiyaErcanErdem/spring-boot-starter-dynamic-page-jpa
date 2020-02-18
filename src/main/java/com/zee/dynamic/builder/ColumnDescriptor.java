@@ -30,7 +30,7 @@ public class ColumnDescriptor<T> {
 
 	private String propertyName;
 	private int level;
-	private int outerJoinCountToTop;
+	private int distance;
 	private boolean idColumn;
 	private String group;
 	private String qualifier;
@@ -62,10 +62,9 @@ public class ColumnDescriptor<T> {
 		this.propertyDescriptor = propertyDescriptor;
 		this.typeDescriptor = typeDescriptor;
 		this.idColumn = idColumn;
-		this.group = container.getGroup();
 		this.qualifier = container.getQualifier();
 		this.level = container.getLevel();
-		this.outerJoinCountToTop = container.getOuterJoinCountToTop();
+		this.distance = container.getDistance();
 		this.propertyName = propertyDescriptor.getName();
 		this.propertyType = propertyDescriptor.getPropertyType();
 		this.parentRelType = container.getRelType();
@@ -89,14 +88,15 @@ public class ColumnDescriptor<T> {
 		}
 		ColumnMetadata col = null;
 		if(this.isAssociativeDescriber()) {
-			col= new ColumnMetadata(this.container.getQualifier(), this.group, this.propertyPath, this.propertyName, this.associationRelationType, ColumnType.ASSOCIATION);
+			col= new ColumnMetadata(this.container, this.container.getQualifier(), this.propertyPath, this.propertyName, this.associationRelationType, ColumnType.ASSOCIATION);
 			col.setLevel(this.level);
+			col.setIdColumn(this.idColumn);
 		} else {
-			col= new ColumnMetadata(this.container.getQualifier(), this.group, this.propertyPath, this.propertyName, this.parentRelType, this.propertyType);
+			col= new ColumnMetadata(this.container, this.container.getQualifier(), this.propertyPath, this.propertyName, this.parentRelType, this.propertyType);
 			col.setLevel(this.level);
 			col.setIdColumn(this.idColumn);
 			if(this.idColumn) {
-				this.container.setIdColumnName(this.propertyName);
+				this.container.setKey(this.propertyName);
 			}
 		}
 		return col;
@@ -134,6 +134,10 @@ public class ColumnDescriptor<T> {
 			this.state = DescriberState.IGNORED;
 		}
 	}
+	
+	public  PageMetamodel<?> getContainer() {
+		return this.container;
+	}
 
 	public String getPropertyName() {
 		return this.propertyName;
@@ -147,8 +151,8 @@ public class ColumnDescriptor<T> {
 		return this.level;
 	}
 		
-	public int getOuterJoinCountToTop() {
-		return outerJoinCountToTop;
+	public int getDistance() {
+		return distance;
 	}
 
 	public String getQualifier() {
@@ -228,6 +232,7 @@ public class ColumnDescriptor<T> {
 			this.column.setNullable(true);
 			this.column.setListable(false);
 			this.column.setSearchable(true);
+			this.column.setupFeatures();
 			return;
 		}
 
@@ -259,7 +264,7 @@ public class ColumnDescriptor<T> {
 		if(null != maxAnnotation) {
 			long maxValue =  maxAnnotation.value();
 			if(maxValue > 0 && maxValue < Long.MAX_VALUE) {
-				this.column.setMaxValue(maxValue);
+				this.column.setMax(maxValue);
 			}
 		}
 
@@ -267,7 +272,7 @@ public class ColumnDescriptor<T> {
 		if(null != minAnnotation) {
 			long minValue =  minAnnotation.value();
 			if(minValue > 0 && minValue < Long.MAX_VALUE) {
-				this.column.setMinValue(minValue);
+				this.column.setMin(minValue);
 			}
 		}
 
@@ -292,11 +297,13 @@ public class ColumnDescriptor<T> {
 			this.column.setIgnorable(false);
 			this.column.setNullable(false);
 		}
+		
+		this.column.setupFeatures();
 	}
 
 	@Override
 	public String toString() {
-		return "\r\nColumnDescriptor [level=" + level + ", outerJoinsToTop=" + outerJoinCountToTop + ", state=" + state + ", propertyPath=" + propertyPath + ", associationType=" + associationType
+		return "\r\nColumnDescriptor [level=" + level + ", distance=" + distance + ", state=" + state + ", propertyPath=" + propertyPath + ", associationType=" + associationType
 				+ ", parentRelType=" + parentRelType + ", group=" + group + ", propertyName=" + propertyName
 				+ ", propertyType=" + propertyType + "]";
 	}

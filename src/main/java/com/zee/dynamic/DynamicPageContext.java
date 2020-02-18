@@ -1,7 +1,9 @@
 package com.zee.dynamic;
 
 import java.util.HashMap;
-import java.util.Map;
+
+import javax.persistence.EntityManager;
+import javax.persistence.metamodel.Metamodel;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,76 +11,76 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.repository.support.Repositories;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
 import com.zee.dynamic.model.PageMetamodel;
 import com.zee.dynamic.util.DynamicUtils;
 
-public class DynamicContext {
-	private final Logger log = LoggerFactory.getLogger(DynamicContext.class);
+public class DynamicPageContext {
+	private final Logger log = LoggerFactory.getLogger(DynamicPageContext.class);
 	
 	private DynamicPageConfig config;
 	private ApplicationContext applicationContext;
+	private EntityManager entityManager;
+	private Repositories repositories = null;
 	
 	private HashMap<String, PageMetamodel<?>> queryMetadataCache;
 	private HashMap<String, DynamicSearchAuthorizer<?, ?>> authorizerCache;	
 	
-	public DynamicContext(DynamicPageConfig config, ApplicationContext applicationContext) {
+	public DynamicPageContext(DynamicPageConfig config, ApplicationContext applicationContext, EntityManager entityManager) {
 		super();
 		this.config = config;
 		this.applicationContext = applicationContext;
+		this.entityManager = entityManager;
+		this.repositories = new Repositories(this.applicationContext);
 		
 		this.queryMetadataCache = new HashMap<>();
 		this.authorizerCache = new HashMap<String, DynamicSearchAuthorizer<?, ?>>();
 		
 		log.warn("DynamicPage EntityBeanPrefix: " + this.config.getEntityBeanPrefix());
-		log.warn("DynamicPage RepositoryBeanPrefix: " + this.config.getRepositoryBeanPrefix());
+	}
+	
+	public Metamodel getMetamodel() {
+		return this.entityManager.getMetamodel();
 	}
 
 
 	public <T> Class<T> getEntityClassOf(String qualifier) {
-		return DynamicUtils.castTo(this.config.getEntityBeanPrefix(), qualifier);		
-	}
-	
-	public <T> Class<T> getRepositoryClassOf(String qualifier) {
-		if(StringUtils.isEmpty(qualifier)){
-			return null;
+		Class<?> clazz = null;
+		if (StringUtils.isEmpty(this.config.getEntityBeanPrefix())) {
+			clazz = this.getMetamodel().getEntities().stream()
+					.filter(e -> e.getJavaType().getSimpleName().equals(qualifier))
+					.findFirst().map(e -> e.getJavaType()).orElse(null);
+
+		} else {
+			clazz = this.getMetamodel().getEntities().stream()
+					.filter(e -> e.getJavaType().getName().equals(this.config.getEntityBeanPrefix() + "." + qualifier))
+					.findFirst().map(e -> e.getJavaType()).orElse(null);
+			// return DynamicUtils.castTo(this.config.getEntityBeanPrefix(), qualifier);
 		}
-		return DynamicUtils.castTo(this.config.getRepositoryBeanPrefix(), qualifier + "Repository");		
-	}
-	
-	public <T> Class<T> getRepositoryClassOf(Class<?> entityClass) {
-		if(null == entityClass){
-			return null;
-		}
-		String qualifier = DynamicUtils.getShortName(entityClass);
-		return DynamicUtils.castTo(this.config.getEntityBeanPrefix(), qualifier + "Repository");		
+		return clazz == null ? null : DynamicUtils.castTo(clazz);	
 	}
 	
 	@SuppressWarnings("unchecked")
-	public <R> R getRepositoryBeanOf(Class<?> beanType){
-		if(null == beanType){
-			return null;
-		}
-		Map<String, ?> beans = this.applicationContext.getBeansOfType(beanType);
-		return (null == beans || beans.isEmpty()) ? null : beans.values().stream().findFirst().map(b -> (R) b).orElse(null);
+	private <R> R getRepositoryBeanOfDomainType(Class<?> domainType){
+		return  domainType == null ? null : this.repositories.getRepositoryFor(domainType).map(r -> (R) r).orElse(null);
 
 	}
 		
 	public <T> JpaSpecificationExecutor<T> getSpecificationExecutorBeanOf(String qualifier){
-		Class<?> beanType = this.getRepositoryClassOf(qualifier);
-		return beanType == null ? null : getRepositoryBeanOf(beanType);
+		Class<?> domainType = this.getEntityClassOf(qualifier);
+		return domainType == null ? null : getRepositoryBeanOfDomainType(domainType);
 	}
 	
 	public <T> JpaRepository<T, ?> getJpaRepositoryBeanOf(String qualifier){
-		Class<?> beanType = this.getRepositoryClassOf(qualifier);
-		return beanType == null ? null : getRepositoryBeanOf(beanType);
+		Class<?> domainType = this.getEntityClassOf(qualifier);
+		return domainType == null ? null : getRepositoryBeanOfDomainType(domainType);
 	}
 	
-	public <T> JpaRepository<T, ?> getJpaRepositoryBeanOf(Class<T> entityClass){
-		Class<?> beanType = this.getRepositoryClassOf(entityClass);
-		return beanType == null ? null : getRepositoryBeanOf(beanType);
+	public <T> JpaRepository<T, ?> getJpaRepositoryBeanOf(Class<T> domainType){
+		return domainType == null ? null : getRepositoryBeanOfDomainType(domainType);
 	}
 
 	@SuppressWarnings("unchecked")

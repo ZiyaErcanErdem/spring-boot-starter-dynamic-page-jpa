@@ -10,34 +10,71 @@ import java.util.List;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class ColumnMetadata {
-	private String qualifier;
-	private String group;
-	private String label;
+	
+	
+	@JsonIgnore
+	private String qualifier; 				// ignore
+	
+	// private String group; 					// ignore
+	
+	@JsonIgnore
+	private String label; 					// ignore
 	private String name;
-	private String path;
-	private RelationType relType;
+	
+	@JsonIgnore
+	private String path;		 			// ignore + client-resolve
+	
+	@JsonIgnore
+	private RelationType relType;			// ignore + client-resolve
+	
 	private ColumnType columnType;
-	private List<Operator> operators;
-	private Object defaultValue;
-	private Operator defaultOperator;
+	
+	@JsonIgnore
+	private int level; 						// ignore
+	
+	@JsonIgnore
+	private List<Operator> operators;		// ignore + client-resolve
+		
+
 	private List<OptionContext> options;
 	private int order;
 
-	private boolean idColumn;
-	private boolean nullable;
-	private boolean listable;
-	private boolean searchable;
-	private boolean editable;
+	@JsonIgnore
+	private boolean idColumn; 				// ignore + client-resolve
+	
+	@JsonIgnore
+	private boolean nullable;				// feature 0
+	
+	@JsonIgnore
+	private boolean searchable;				// feature 1
+	
+	@JsonIgnore
+	private boolean listable;				// feature 2
+	
+	@JsonIgnore
+	private boolean viewable;				// feature 3
+	
+	@JsonIgnore
+	private boolean editable;				// feature 4
+	
+	@JsonIgnore
+	private boolean ignorable;				// feature 5
+	
+	
+	private long min; 						// min
+	private long max; 						// max
+	private int minLength; 					// minLen
+	private int maxLength; 					// maxLen
+								//   0     1      2    3    4    5      6
+	private String features; 	// |null|search|list|view|edit|ignore|idColumn
 
-	private boolean ignorable;
-	private boolean viewable;
-	private long minValue;
-	private long maxValue;
-	private int minLength;
-	private int maxLength;
-	private int level;
-
+	
+	@JsonIgnore
+	private PageMetamodel<?> parent;
+	
 	private PageMetamodel<?> metamodel;
 
 	public ColumnMetadata() {
@@ -50,19 +87,19 @@ public class ColumnMetadata {
 		this.idColumn = false;
 		this.ignorable = false;
 		this.viewable = true;
-		this.minValue = 0;
-		this.maxValue = 0;
+		this.min = 0;
+		this.max = 0;
 		this.minLength = 0;
 		this.maxLength = 0;
 	}
 
-	public ColumnMetadata(String qualifier, String group, String path, String name, RelationType relType, ColumnType columnType) {
+	public ColumnMetadata(PageMetamodel<?> parent, String qualifier, String path, String name, RelationType relType, ColumnType columnType) {
 		this();
+		this.parent = parent;
 		this.relType = relType;
 		this.qualifier = qualifier;
-		this.group = group;
 		this.path = path;
-		this.name = this.extractName(this.path, this.group, this.relType);
+		this.name = this.extractName(this.path, this.relType);
 		this.label = this.extractLabel(this.qualifier, this.name, this.relType);
 		this.columnType = columnType;
 		this.setupAvailableOperators();
@@ -71,11 +108,11 @@ public class ColumnMetadata {
 
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public ColumnMetadata(String qualifier, String group, String path, String name, RelationType relType, Class<?> fieldCls) {
+	public ColumnMetadata(PageMetamodel<?> parent, String qualifier, String path, String name, RelationType relType, Class<?> fieldCls) {
 		this();
+		this.parent = parent;
 		this.relType = relType;
 		this.qualifier = qualifier;
-		this.group = group;
 		this.path = path;
 		this.name = name; // this.extractName(this.path, this.group, this.relType);
 		this.label = this.extractLabel(this.qualifier, this.name, this.relType);
@@ -87,7 +124,7 @@ public class ColumnMetadata {
 		}
 	}
 
-	private String extractName(String path, String group, RelationType relType) {
+	private String extractName(String path, RelationType relType) {
 		if(StringUtils.isEmpty(path) || !path.contains(".")){
 			return path;
 		}
@@ -170,23 +207,14 @@ public class ColumnMetadata {
 	private void setupDefaults() {
 		if(ColumnType.ENUM == this.columnType) {
 			this.nullable = false;
-			this.defaultOperator = Operator.EQ;
 		}else if(ColumnType.NUMBER == this.columnType || ColumnType.DOUBLE == this.columnType) {
 			this.nullable = false;
-			this.defaultValue = 0;
-			this.defaultOperator = Operator.GT;
 		}else if(ColumnType.DATE == this.columnType) {
 			this.nullable = true;
-			this.defaultValue = null;
-			this.defaultOperator = Operator.GT;
 		}else if(ColumnType.STRING == this.columnType) {
 			this.nullable = true;
-			this.defaultValue = "";
-			this.defaultOperator = Operator.LIKE;
 		}else if(ColumnType.BOOLEAN == this.columnType) {
 			this.nullable = false;
-			this.defaultValue = false;
-			this.defaultOperator = Operator.EQ;
 		}
 		if(RelationType.OUTER == this.relType) {
 			this.listable = false;
@@ -196,7 +224,24 @@ public class ColumnMetadata {
 			this.editable = false;
 			this.searchable = true;
 		}
+		this.setupFeatures();
+	}
+	
+	public void setupFeatures() {
+		
+		//   0     1      2    3    4    5     6
+		// |null|search|list|view|edit|ignore|isId|
 
+		this.features = String.join(
+				"|", 
+				this.nullable ? "1" : "0",
+				this.searchable ? "1" : "0",
+				this.listable ? "1" : "0",
+				this.viewable ? "1" : "0",
+				this.editable ? "1" : "0",
+				this.ignorable ? "1" : "0",
+				this.idColumn ? "1" : "0"
+		);
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
@@ -206,8 +251,6 @@ public class ColumnMetadata {
 		vals.forEach(e -> {
 			OptionContext o = new OptionContext(enumName,e.name());
 			this.addOption(o);
-			this.defaultValue = e.name();
-			this.defaultOperator = Operator.EQ;
 		});
 	}
 
@@ -225,20 +268,13 @@ public class ColumnMetadata {
 		return this;
 	}
 
+	@JsonIgnore
 	public String getQualifier() {
 		return qualifier;
 	}
 
 	public void setQualifier(String qualifier) {
 		this.qualifier = qualifier;
-	}
-
-	public String getGroup() {
-		return group;
-	}
-
-	public void setGroup(String group) {
-		this.group = group;
 	}
 
 	public String getName() {
@@ -249,6 +285,7 @@ public class ColumnMetadata {
 		this.name = name;
 	}
 
+	@JsonIgnore
 	public String getPath() {
 		return path;
 	}
@@ -257,6 +294,7 @@ public class ColumnMetadata {
 		this.path = path;
 	}
 
+	@JsonIgnore
 	public String getLabel() {
 		return label;
 	}
@@ -265,6 +303,7 @@ public class ColumnMetadata {
 		this.label = label;
 	}
 
+	@JsonIgnore
 	public RelationType getRelType() {
 		return relType;
 	}
@@ -281,6 +320,7 @@ public class ColumnMetadata {
 		this.columnType = columnType;
 	}
 
+	@JsonIgnore
 	public boolean isNullable() {
 		return nullable;
 	}
@@ -289,6 +329,7 @@ public class ColumnMetadata {
 		this.nullable = nullable;
 	}
 
+	@JsonIgnore
 	public boolean isListable() {
 		return listable;
 	}
@@ -297,6 +338,7 @@ public class ColumnMetadata {
 		this.listable = listable;
 	}
 
+	@JsonIgnore
 	public boolean isSearchable() {
 		return searchable;
 	}
@@ -305,6 +347,7 @@ public class ColumnMetadata {
 		this.searchable = searchable;
 	}
 
+	@JsonIgnore
 	public boolean isEditable() {
 		return editable;
 	}
@@ -313,6 +356,7 @@ public class ColumnMetadata {
 		this.editable = editable;
 	}
 
+	@JsonIgnore
 	public boolean isIgnorable() {
 		return ignorable;
 	}
@@ -321,6 +365,7 @@ public class ColumnMetadata {
 		this.ignorable = ignorable;
 	}
 
+	@JsonIgnore
 	public boolean isViewable() {
 		return viewable;
 	}
@@ -329,20 +374,20 @@ public class ColumnMetadata {
 		this.viewable = viewable;
 	}
 
-	public long getMinValue() {
-		return minValue;
+	public long getMin() {
+		return min;
 	}
 
-	public void setMinValue(long minValue) {
-		this.minValue = minValue;
+	public void setMin(long min) {
+		this.min = min;
 	}
 
-	public long getMaxValue() {
-		return maxValue;
+	public long getMax() {
+		return max;
 	}
 
-	public void setMaxValue(long maxValue) {
-		this.maxValue = maxValue;
+	public void setMax(long max) {
+		this.max = max;
 	}
 
 	public int getMinLength() {
@@ -361,6 +406,7 @@ public class ColumnMetadata {
 		this.maxLength = maxLength;
 	}
 
+	@JsonIgnore
 	public boolean isIdColumn() {
 		return idColumn;
 	}
@@ -372,28 +418,13 @@ public class ColumnMetadata {
         }
 	}
 
+	@JsonIgnore
 	public List<Operator> getOperators() {
 		return operators;
 	}
 
 	public void setOperators(List<Operator> operators) {
 		this.operators = operators;
-	}
-
-	public Object getDefaultValue() {
-		return defaultValue;
-	}
-
-	public void setDefaultValue(Object defaultValue) {
-		this.defaultValue = defaultValue;
-	}
-
-	public Operator getDefaultOperator() {
-		return defaultOperator;
-	}
-
-	public void setDefaultOperator(Operator defaultOperator) {
-		this.defaultOperator = defaultOperator;
 	}
 
 	public List<OptionContext> getOptions() {
@@ -406,8 +437,8 @@ public class ColumnMetadata {
 
 	@Override
 	public String toString() {
-		return "Field [group=" + group + ", relType=" + relType + ", path=" + path + ", columnType=" + columnType
-				+ ", defaultValue=" + defaultValue + ", defaultOperator=" + defaultOperator + "]";
+		return "Field [qualifier=" + qualifier + ", relType=" + relType + ", path=" + path + ", columnType=" + columnType
+				+ ", features=" + features + "]";
 	}
 
 	public PageMetamodel<?> getMetamodel() {
@@ -426,11 +457,16 @@ public class ColumnMetadata {
 		this.order = order;
 	}
 
+	@JsonIgnore
 	public int getLevel() {
 		return level;
 	}
 
 	public void setLevel(int level) {
 		this.level = level;
+	}
+
+	public String getFeatures() {
+		return features;
 	}
 }

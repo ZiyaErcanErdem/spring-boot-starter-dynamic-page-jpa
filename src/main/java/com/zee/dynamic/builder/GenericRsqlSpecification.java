@@ -67,16 +67,16 @@ public class GenericRsqlSpecification<T> implements Specification<T>{
     public Predicate toPredicate(Root<T> root, CriteriaQuery<?> query, CriteriaBuilder builder) {   
         Expression propertyPath = findPropertyPath(this.selector, root, builder);
         
-        log.info("Cast all arguments to type {}.", propertyPath.getJavaType().getName());
+        log.debug("Cast all arguments to type {}.", propertyPath.getJavaType().getName());
     	List<Object> arguments = parser.parse(this.comparisonArguments, propertyPath.getJavaType());
     	
     	if(this.distinct) {
     		query.distinct(true);
-    		log.info("Query will be executed as distinct due to outer join path expression => {}", propertyPath.getJavaType().getName());
+    		log.debug("Query will be executed as distinct due to outer join path expression => {}", propertyPath.getJavaType().getName());
     	}
     	
  
-        log.info("Creating predicate: propertyPath {} {}", operator, arguments);
+        log.debug("Creating predicate: propertyPath {} {}", operator, arguments);
 
     	if (ComparisonOperatorProxy.asEnum(operator) != null) {
     		switch (ComparisonOperatorProxy.asEnum(operator)) {

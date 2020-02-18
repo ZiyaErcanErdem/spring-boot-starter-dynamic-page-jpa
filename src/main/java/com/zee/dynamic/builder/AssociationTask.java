@@ -105,14 +105,13 @@ public class AssociationTask<T> {
 		}
 		
 		int descLevel = describer.getLevel();
-		int descOuterJoinCountToTop = describer.getOuterJoinCountToTop();
+		int distance = describer.getDistance();
 		int currentLevel = this.minDescriber.getLevel();
 		String descPropertyPath = describer.getPropertyPath();
 		String currentPropertyPath = this.minDescriber.getPropertyPath();
-		boolean descHasLessOuterJoins = descOuterJoinCountToTop < this.minDescriber.getOuterJoinCountToTop();
-		boolean descHasSameOuterJoins = descOuterJoinCountToTop == this.minDescriber.getOuterJoinCountToTop();
+		boolean closerToTopt = distance < this.minDescriber.getDistance();
 		
-		if(descLevel > currentLevel && descHasLessOuterJoins) {
+		if(descLevel > currentLevel && closerToTopt) {
 			if(this.minDescriber.getAssociationRelationType() == RelationType.OUTER) {
 				if(describer.getAssociationRelationType() != RelationType.OUTER) {
 					// Prefer inner join paths

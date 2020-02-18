@@ -66,11 +66,11 @@ public class GenericRsqlExample<T>{
         	return null;
         }
         
-        log.info("Cast all arguments to type {}.", propertyType.getName());
+        log.debug("Cast all arguments to type {}.", propertyType.getName());
     	List<?> arguments = parser.parse(this.comparisonArguments, propertyType);
     	
  
-        log.info("Creating predicate: propertyPath {} {}", new Object[]{operator, arguments});
+        log.debug("Creating predicate: propertyPath {} {}", new Object[]{operator, arguments});
 
     	if (ComparisonOperatorProxy.asEnum(operator) != null) {
     		switch (ComparisonOperatorProxy.asEnum(operator)) {

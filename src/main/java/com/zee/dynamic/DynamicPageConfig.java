@@ -5,7 +5,7 @@ import java.util.List;
 
 public class DynamicPageConfig {
 	private String entityBeanPrefix;
-	private String repositoryBeanPrefix;
+	private int maxAssociationLevel;
 	private List<String> maxDeepsForOuterJoin;
 	private List<String> maxDeepsForInnerJoin;
 
@@ -13,6 +13,7 @@ public class DynamicPageConfig {
 	public DynamicPageConfig() {
 		this.maxDeepsForOuterJoin = new ArrayList<>();
 		this.maxDeepsForInnerJoin = new ArrayList<>();
+		this.maxAssociationLevel = 2;
 	}
 	
 	public String getEntityBeanPrefix() {
@@ -23,14 +24,14 @@ public class DynamicPageConfig {
 		this.entityBeanPrefix = entityBeanPrefix;
 	}
 
-	public String getRepositoryBeanPrefix() {
-		return repositoryBeanPrefix;
+	public int getMaxAssociationLevel() {
+		return maxAssociationLevel;
 	}
 
-	public void setRepositoryBeanPrefix(String repositoryBeanPrefix) {
-		this.repositoryBeanPrefix = repositoryBeanPrefix;
+	public void setMaxAssociationLevel(int maxLevel) {
+		this.maxAssociationLevel = maxLevel;
 	}
-	
+
 	public void defineMaxDeepForOuterJoin(String entityName) {
 		if(!this.isMaxDeepForOuterJoin(entityName)) {
 			this.maxDeepsForOuterJoin.add(entityName);

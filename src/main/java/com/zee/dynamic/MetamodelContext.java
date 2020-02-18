@@ -59,23 +59,21 @@ public class MetamodelContext<T> {
 		return task;
 	}
 	
+	/*
 	public <E, A> void defineColumn(PageMetamodel<E> container, String propertyPath, PropertyDescriptor propertyDescriptor, TypeDescriptor typeDescriptor) {
 		this.defineColumn(container, propertyPath, propertyDescriptor, typeDescriptor, false, null, null);		
 	}
+	*/
 	
 	public <E, A> void defineColumn(PageMetamodel<E> container, String propertyPath, PropertyDescriptor propertyDescriptor, TypeDescriptor typeDescriptor, boolean isIdColumn) {
 		this.defineColumn(container, propertyPath, propertyDescriptor, typeDescriptor, isIdColumn, null, null);		
 	}
-	
-	public <E, A> void defineColumn(PageMetamodel<E> container, String propertyPath, PropertyDescriptor propertyDescriptor, TypeDescriptor typeDescriptor, Class<A> associationType, RelationType associationRelationType) {
-		this.defineColumn(container, propertyPath, propertyDescriptor, typeDescriptor, false, associationType, associationRelationType);		
-	}
-	
-	private <E, A> void defineColumn(PageMetamodel<E> container, String propertyPath, PropertyDescriptor propertyDescriptor, TypeDescriptor typeDescriptor, boolean isIdColumn, Class<A> associationType, RelationType associationRelationType) {
+		
+	public <E, A> void defineColumn(PageMetamodel<E> container, String propertyPath, PropertyDescriptor propertyDescriptor, TypeDescriptor typeDescriptor, boolean isIdColumn, Class<A> associationType, RelationType associationRelationType) {
 		ColumnDescriptor<E> descriptor = new ColumnDescriptor<E>(container, propertyPath, propertyDescriptor, typeDescriptor, isIdColumn, associationType, associationRelationType);
 		if(descriptor.isAssociativeDescriber()) {
 			AssociationTask<?> task = this.getOrAddTask(associationType);
-			if(null != task) {
+			if(null != task && descriptor.getLevel() < this.config.getMaxAssociationLevel()) {
 				task.addDescriber(descriptor);
 			}
 		}

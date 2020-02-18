@@ -3,13 +3,11 @@ package com.zee.dynamic;
 import java.io.IOException;
 import java.util.List;
 
-import javax.persistence.EntityManager;
 import javax.persistence.metamodel.Metamodel;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanWrapper;
-import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
@@ -43,21 +41,18 @@ import cz.jirutka.rsql.parser.ast.Node;
 public class DynamicPageManager {
 	private final Logger log = LoggerFactory.getLogger(DynamicPageManager.class);
 	
-	private DynamicContext dynamicContext;
-	private DynamicPageConfig config;
-	private ApplicationContext applicationContext;
-	private EntityManager entityManager;
+	private DynamicPageContext dynamicPageContext;
+	private DynamicPageConfig config; 
 	
-	public DynamicPageManager(DynamicPageConfig config, ApplicationContext applicationContext, EntityManager entityManager) {
+	public DynamicPageManager(DynamicPageContext dynamicPageContext, DynamicPageConfig config) {
 		super();
+		this.dynamicPageContext = dynamicPageContext;
 		this.config = config;
-		this.applicationContext = applicationContext;
-		this.entityManager = entityManager;		
-		this.dynamicContext = new DynamicContext(this.config, this.applicationContext);
+		
 	}
 
 	public <T> Example<T> prepareExampleFor(String qualifier, String query) {
-		Class<T> entityClass = this.dynamicContext.getEntityClassOf(qualifier);
+		Class<T> entityClass = this.dynamicPageContext.getEntityClassOf(qualifier);
 		return this.prepareExampleFor(entityClass, query);
 	}
 	
@@ -77,13 +72,13 @@ public class DynamicPageManager {
 	}
 	
 	public <T> Specification<T> prepareSpecFor(String qualifier, String query) {
-		Class<T> entityClass = this.dynamicContext.getEntityClassOf(qualifier);
+		Class<T> entityClass = this.dynamicPageContext.getEntityClassOf(qualifier);
 		return this.prepareSpecFor(entityClass, query);
 	}
 	
 	public <T> Specification<T> prepareSpecFor(Class<T> cls, String query) {		
 		Node rootNode = new RSQLParser().parse(query);		
-		Metamodel metamodel = this.entityManager.getMetamodel();
+		Metamodel metamodel = this.dynamicPageContext.getMetamodel();
 		Specification<T> spec = rootNode.accept(new GenericRsqlSpecificationVisitor<T, Metamodel>(), metamodel);		
 		return spec;
 	}
@@ -91,7 +86,7 @@ public class DynamicPageManager {
 	public <T, A> DynamicAuthorizedSearchResponse<T, A> authorize(DynamicAuthorizableSearchRequest request, Page<T> page) {
 		DynamicAuthorizedSearchResponse<T,A> response = null;
 		String qualifier = request.getQualifier();
-		DynamicSearchAuthorizer<T, A> authorizer = this.dynamicContext.getDynamicSearchAuthorizerBeanOf(qualifier);
+		DynamicSearchAuthorizer<T, A> authorizer = this.dynamicPageContext.getDynamicSearchAuthorizerBeanOf(qualifier);
 		if (null == authorizer) {
 			response = new DynamicAuthorizedSearchResponse<T,A>(qualifier);
 			response.setPage(page);
@@ -142,25 +137,25 @@ public class DynamicPageManager {
 	}
 	
 	public <T> Page<T> search(String qualifier, Pageable pageable) {
-		JpaRepository<T, ?> repository = this.dynamicContext.getJpaRepositoryBeanOf(qualifier);
+		JpaRepository<T, ?> repository = this.dynamicPageContext.getJpaRepositoryBeanOf(qualifier);
 		Page<T> page =  repository.findAll(pageable);
 		return page;
 	}
 	
 	public <T> Page<T> search(String qualifier, Example<T> example, Pageable pageable) {
-		JpaRepository<T, ?> repository = this.dynamicContext.getJpaRepositoryBeanOf(qualifier);
+		JpaRepository<T, ?> repository = this.dynamicPageContext.getJpaRepositoryBeanOf(qualifier);
 		Page<T> page = repository.findAll(example, pageable);
 		return page;
 	}
 	
 	public <T> Page<T> search(String qualifier, Specification<T> spec, Pageable pageable) {
-		JpaSpecificationExecutor<T> repository = this.dynamicContext.getSpecificationExecutorBeanOf(qualifier);		
+		JpaSpecificationExecutor<T> repository = this.dynamicPageContext.getSpecificationExecutorBeanOf(qualifier);		
 		Page<T> page = repository.findAll(spec, pageable);
 		return page;
 	}
 	
 	public <T> Resource exportTemplate(String qualifier) throws IOException {
-		Class<T> entityClass = this.dynamicContext.getEntityClassOf(qualifier);
+		Class<T> entityClass = this.dynamicPageContext.getEntityClassOf(qualifier);
 		return this.exportTemplate(entityClass);
 	}
 	
@@ -174,7 +169,7 @@ public class DynamicPageManager {
 	}
 	
 	public <T> Resource exportEntity(String qualifier, String query, Pageable pageable) throws IOException {
-		Class<T> entityClass = this.dynamicContext.getEntityClassOf(qualifier);
+		Class<T> entityClass = this.dynamicPageContext.getEntityClassOf(qualifier);
 		return this.exportEntity(entityClass, query, pageable);
 	}
 	
@@ -191,12 +186,12 @@ public class DynamicPageManager {
 	}
 	
 	public <T> Resource importEntity(String qualifier, Resource resource) throws IOException {
-		Class<T> entityClass = this.dynamicContext.getEntityClassOf(qualifier);
+		Class<T> entityClass = this.dynamicPageContext.getEntityClassOf(qualifier);
 		return this.importEntity(entityClass, resource);
 	}
 	
 	public <T> Resource importEntity(Class<T> entityClass, Resource resource) throws IOException {
-		JpaRepository<T, ?> repository = this.dynamicContext.getJpaRepositoryBeanOf(entityClass);
+		JpaRepository<T, ?> repository = this.dynamicPageContext.getJpaRepositoryBeanOf(entityClass);
 		
 		PageMetamodel<T> metamodel = this.getPageMetamodelOf(entityClass);
 		DynamicExcel<T> dynamicExcel = new DynamicExcel<T>(metamodel);
@@ -224,19 +219,19 @@ public class DynamicPageManager {
 	
 	public <T> PageMetamodel<?> getPageMetamodelOf(String qualifier) {
 		if(StringUtils.isEmpty(qualifier)){
-			return new PageMetamodel<T>(qualifier, RelationType.SELF, 0, 0);
+			return new PageMetamodel<T>(null, qualifier, RelationType.SELF, "", 0);
 		}
 
-		PageMetamodel<?> qm = this.dynamicContext.lookupCachedMetamodel(qualifier);
+		PageMetamodel<?> qm = this.dynamicPageContext.lookupCachedMetamodel(qualifier);
 		if(null != qm) {
 			return qm;
 		}
-		Class<?> cls = DynamicUtils.classForName(this.config.getEntityBeanPrefix(), qualifier);
-		if(null == cls) {
-			return new PageMetamodel<T>(qualifier, RelationType.SELF, 0, 0);
+		Class<T> entityClass = this.dynamicPageContext.getEntityClassOf(qualifier);
+		if(null == entityClass) {
+			return new PageMetamodel<T>(null, qualifier, RelationType.SELF, "", 0);
 		}
-		qm = this.getPageMetamodelOf(cls);
-		this.dynamicContext.cacheMetamodel(qualifier, qm);
+		qm = this.getPageMetamodelOf(entityClass);
+		this.dynamicPageContext.cacheMetamodel(qualifier, qm);
 		return qm;
 	}
 	

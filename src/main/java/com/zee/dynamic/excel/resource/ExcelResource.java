@@ -33,7 +33,7 @@ public class ExcelResource {
         this.dynamicPageManager = dynamicPageManager;
     }
 
-    @GetMapping("/excel/export/{qualifier}")
+    @GetMapping("/dynamic/excel/export/{qualifier}")
     public ResponseEntity<Resource> exportExcel(@PathVariable String qualifier, @RequestParam String search, Pageable pageable) throws IOException {
         log.debug("REST request to export {} via Excel {}", qualifier, search);
         Resource resource = this.dynamicPageManager.exportEntity(qualifier, search, pageable);
@@ -42,7 +42,7 @@ public class ExcelResource {
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"").body(resource);
     }
 
-    @GetMapping("/excel/template/{qualifier}")
+    @GetMapping("/dynamic/excel/template/{qualifier}")
     public ResponseEntity<Resource> exportExcelTemplate(@PathVariable String qualifier) throws IOException {
         log.debug("REST request to export excel template of {}", qualifier);
         Resource resource = this.dynamicPageManager.exportTemplate(qualifier);
@@ -51,7 +51,7 @@ public class ExcelResource {
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"").body(resource);
     }
 
-    @PostMapping("/excel/import/{qualifier}")
+    @PostMapping("/dynamic/excel/import/{qualifier}")
     public ResponseEntity<Resource> importExcel(@PathVariable String qualifier, @RequestParam("file") MultipartFile document) throws IOException {
         log.debug("REST request to import excel document of {}", qualifier);
         InputStreamResource resource = new InputStreamResource(document.getInputStream());

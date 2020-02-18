@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
+import com.zee.dynamic.DynamicPageContext;
 import com.zee.dynamic.DynamicPageConfig;
 import com.zee.dynamic.DynamicPageManager;
 import com.zee.dynamic.config.DynamicProperties;
@@ -37,13 +38,11 @@ public class DynamicAutoConfiguration {
                 ? System.getProperty("dynamic.entity.prefix") 
                 : dynamicProperties.getJpaEntityPackageName();
          
-          String repositoryBeanPrefix = dynamicProperties.getJpaRepositoryPackageName() == null
-                  ? System.getProperty("dynamic.repository.prefix") 
-                  : dynamicProperties.getJpaRepositoryPackageName();
-           
+          
           DynamicPageConfig config = new DynamicPageConfig();
           config.setEntityBeanPrefix(entityBeanPrefix);
-          config.setRepositoryBeanPrefix(repositoryBeanPrefix);
+          
+          config.setMaxAssociationLevel(dynamicProperties.getMaxAssociationLevel());
           
           /*
           config.defineMaxDeepForInnerJoin("FlowExecution");
@@ -61,11 +60,20 @@ public class DynamicAutoConfiguration {
           
           return config;
     }
+    
+    @Bean
+    @ConditionalOnMissingBean
+    public DynamicPageContext dynamicContext(DynamicPageConfig config, ApplicationContext applicationContext, EntityManager entityManager) {
+        return new DynamicPageContext(config, applicationContext, entityManager);
+    }
  
     @Bean
     @ConditionalOnMissingBean
-    public DynamicPageManager dynamicPageManager(DynamicPageConfig config, ApplicationContext applicationContext, EntityManager entityManager) {
-        return new DynamicPageManager(config, applicationContext, entityManager);
+    public DynamicPageManager dynamicPageManager(DynamicPageConfig config, DynamicPageContext dynamicContext, EntityManager entityManager) {
+        return new DynamicPageManager(dynamicContext, config);
     }
+    
+
+    
 
 }

@@ -63,7 +63,7 @@ public class ExcelDataContext<T> {
 	private ColumnMetadata getOrMapAssociationColumn(ColumnMetadata column) {
 		if(column.getRelType() == RelationType.INNER) {
 			PageMetamodel<?> associationMetaModel = column.getMetamodel();
-			String associationIdentifierName = associationMetaModel.getIdColumnName();
+			String associationIdentifierName = associationMetaModel.getKey();
 			Optional<ColumnMetadata> associationColumnSearch = associationMetaModel.getColumns().stream().filter(a -> a.getName().equals(associationIdentifierName)).findFirst();
 			if(associationColumnSearch.isPresent()) {
 				ColumnMetadata associationColumn = associationColumnSearch.get();
@@ -111,7 +111,7 @@ public class ExcelDataContext<T> {
 		String propertyPath = column.getPath();
 		if(column.getRelType() == RelationType.INNER) {
 			PageMetamodel<?> associationMetaModel = column.getMetamodel();
-			String associationIdentifierName = associationMetaModel.getIdColumnName();
+			String associationIdentifierName = associationMetaModel.getKey();
 			Optional<ColumnMetadata> associationColumnSearch = associationMetaModel.getColumns().stream().filter(a -> a.getName().equals(associationIdentifierName)).findFirst();
 			if(associationColumnSearch.isPresent()) {
 				ColumnMetadata associationColumn = associationColumnSearch.get();

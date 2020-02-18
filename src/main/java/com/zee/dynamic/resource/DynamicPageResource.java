@@ -39,7 +39,7 @@ public class DynamicPageResource {
         this.dynamicPageManager = dynamicPageManager;
     }
 
-    @GetMapping("/search/metamodel/{qualifier}")
+    @GetMapping("/dynamic/metamodel/{qualifier}")
     public ResponseEntity<PageMetamodel<?>> getQueryMetadataOf(@PathVariable String qualifier) {
         log.debug("REST request to get QueryMetadata of {}", qualifier);
         PageMetamodel<?> metamodel = this.dynamicPageManager.getPageMetamodelOf(qualifier);
@@ -55,7 +55,7 @@ public class DynamicPageResource {
         return new ResponseEntity<>(metamodel, HttpStatus.OK);
     }
 
-    @GetMapping("/search/dynamic/{qualifier}")
+    @GetMapping("/dynamic/search/{qualifier}")
     public ResponseEntity<List<?>> search(@PathVariable String qualifier, @RequestParam String search, Pageable pageable) {
         log.debug("REST request to search {} via RSQL {}", qualifier, search);
         Page<?> page = this.dynamicPageManager.search(qualifier, search, pageable);
@@ -64,7 +64,7 @@ public class DynamicPageResource {
         return new ResponseEntity<>(page.getContent(), headers, HttpStatus.OK);
     }
 
-    @PostMapping("/search/dynamic/{qualifier}")
+    @PostMapping("/dynamic/search/{qualifier}")
     public ResponseEntity<DynamicAuthorizedSearchResponse<?, ?>> authorizableSearch(@PathVariable String qualifier, @NotNull @Valid @RequestBody DynamicAuthorizableSearchRequest request, Pageable pageable) {
         log.debug("REST request to authorizableSearch via RSQL => {}",request);
 

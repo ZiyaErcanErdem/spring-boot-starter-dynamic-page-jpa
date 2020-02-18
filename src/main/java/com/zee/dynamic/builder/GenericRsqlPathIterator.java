@@ -257,7 +257,7 @@ public class GenericRsqlPathIterator implements Iterator<Path<?>> {
             this.paths[this.current] = this.root;
             this.checkRoot();
         } else if (this.root instanceof From){		        	
-        	   log.info("Create join between {} and {}.", this.parentVal, this.currentVal);
+        	   log.debug("Create join between {} and {}.", this.parentVal, this.currentVal);
         	   //this.root = this.joinWith((From<?, ?>)this.root, this.currentVal); 
         	   this.root = this.getOrCreateJoin((From<?, ?>)this.root, this.currentVal);
         	   this.paths[this.current] = this.root;
@@ -269,7 +269,7 @@ public class GenericRsqlPathIterator implements Iterator<Path<?>> {
 	}
 	
 	public Path<?> getNextPropertyPath() {
-    	log.info("Create property path for type {} property {}.", this.parentVal, this.currentVal);
+    	log.debug("Create property path for type {} property {}.", this.parentVal, this.currentVal);
         root = root.get(this.currentVal);	
         this.paths[this.current] = this.root;
         return this.root;

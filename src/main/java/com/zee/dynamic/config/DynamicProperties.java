@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "zee.dynamic")
 public class DynamicProperties {
 	private String jpaEntityPackageName;
-	private String jpaRepositoryPackageName;
+	private int maxAssociationLevel;
 	
 	public String getJpaEntityPackageName() {
 		return jpaEntityPackageName;
@@ -13,10 +13,11 @@ public class DynamicProperties {
 	public void setJpaEntityPackageName(String jpaEntityPackageName) {
 		this.jpaEntityPackageName = jpaEntityPackageName;
 	}
-	public String getJpaRepositoryPackageName() {
-		return jpaRepositoryPackageName;
+	public int getMaxAssociationLevel() {
+		return maxAssociationLevel;
 	}
-	public void setJpaRepositoryPackageName(String jpaRepositoryPackageName) {
-		this.jpaRepositoryPackageName = jpaRepositoryPackageName;
+	public void setMaxAssociationLevel(int maxAssociationLevel) {
+		this.maxAssociationLevel = maxAssociationLevel;
 	}
+
 }
